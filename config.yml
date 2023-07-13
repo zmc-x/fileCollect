@@ -1,0 +1,25 @@
+# mysql service config
+mysql:
+    databaseName: fileCollect
+    url: 127.0.0.1
+    port: 3306
+    userName: root
+    passWord: 123456
+    # maxIdleConns sets the maximum number of connections in the idle connection pool
+    maxIdleConns: 10
+    # maxOpenConns sets the maximum number of open connections to the database.
+    maxOpenConns: 100
+    # connMaxLifetime sets the maximum amount of time a connection may be reused.
+    # its units is hour
+    connMaxLifetime: 1
+
+# gin/system service config 
+service:
+    port: 8080
+
+# redis service config
+redis:
+    addr: zmcicloud.cn
+    port: 6379
+    passWord: 123456
+    db: 0
