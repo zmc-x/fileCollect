@@ -31,9 +31,6 @@ func (s *FolderService) CreateFolder(folderName string, storageId uint, parentFo
 // update the folder Name
 func (s *FolderService) UpdateFolderName(folderId uint, newName string) error {
 	db := global.MysqlDB
-	if err := checkRecordById(folderId, model.Folder{}); err != nil {
-		return err 
-	}
 	res := db.Model(&model.Folder{}).Where("id = ?", folderId).Update("FolderName", newName)
 	return res.Error
 }

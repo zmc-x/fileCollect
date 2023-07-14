@@ -21,4 +21,9 @@ func (s *StorageApi) InitStorageRouter(rg *gin.RouterGroup) {
 		update.POST("realPath", storageApi.UpdateStoragePath)
 		update.POST("status", storageApi.UpdateStorageStatus)
 	}
+	query := storageRouter.Group("query")
+	{
+		query.GET("storageInfo", storageApi.QueryStorageInfo)
+		query.GET("list", storageApi.QueryFilesList)
+	}
 }

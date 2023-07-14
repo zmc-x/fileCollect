@@ -20,7 +20,6 @@ type StorageInfo struct {
 	Id				uint 
 	StorageName 	string 
 	StorageUrlName 	string 
-	StorageRealPath string
 	// storage's path
 	Path			string 
 	Status	 		bool

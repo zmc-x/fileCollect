@@ -16,6 +16,7 @@ func Router() *gin.Engine {
 	{
 		systemRouters.InitFileApiRouter(systemApi)
 		systemRouters.InitStorageRouter(systemApi)
+		systemRouters.InitFolderRouter(systemApi)
 	}
 	return r
 }

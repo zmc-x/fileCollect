@@ -25,12 +25,12 @@ func InitMysql(sc *global.ServerConfig) {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
-		log.Fatal("connect mysql database error, the error is " + err.Error())
+		log.Fatal("initialize/gorm.go InitMysql function:" + err.Error())
 	}
 	global.MysqlDB = db
 	global.SqlDb, err = db.DB()
 	if err != nil {
-		log.Fatal("return the 'sql.DB' error, the error is " + err.Error())
+		log.Fatal("initialize/gorm.go InitMysql function:" + err.Error())
 	}
 	// set the connection pool
 	global.SqlDb.SetMaxIdleConns(sc.DbPoolMaxIdleConns)

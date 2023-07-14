@@ -35,11 +35,11 @@ func InitConfig() *global.ServerConfig {
 	// read the config.yml
 	data, err := os.ReadFile("config.yml")
 	if err != nil {
-		log.Fatal("Global config modul InitConfig function read the file error, this error is " + err.Error())
+		log.Fatal("initialize/init.go InitConfig function:" + err.Error())
 	}
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		log.Fatal("this yml file unmarshal error, this error is" + err.Error())
+		log.Fatal("initialize/init.go InitConfig function:" + err.Error())
 	}
 	return &global.ServerConfig{
 		DbUser: config.Mysql.Username,

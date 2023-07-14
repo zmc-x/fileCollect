@@ -29,9 +29,6 @@ func (s *FileService) StoreFile(fileSize, storageId uint, fileName string, folde
 // update file related information
 func (s *FileService) UpdateFileName(fileId uint, newName string) error {
 	db := global.MysqlDB
-	if err := checkRecordById(fileId, model.File{}); err != nil {
-		return err
-	}
 	res := db.Model(&model.File{}).Where("id = ?", fileId).Update("FileName", newName)
 	return res.Error
 }

@@ -2,19 +2,28 @@ package request
 
 // file info
 type FileInfo struct {
-	FolderID        uint   `json:"folderId"`       
-	Path            string `json:"path"`           
-	StorageID       uint   `json:"storageId"`      
-	StorageRealPath string `json:"storageRealPath"`
+	FolderID        uint   `form:"folderId"`       
+	Path            string `form:"path"`           
+	StorageID       uint   `form:"storageId"`      
 }
 
 // files array
-type FileId struct {
-	Files []uint			`json:"files"`
+type FileArray struct {
+	Files []File		`json:"files"`
+	Path  string		`json:"path"`
+	StorageId uint	 	`json:"storageId"`
+}
+
+// singal file information
+type File struct {
+	FileID    uint   `json:"fileId"`  
+	FileName  string `json:"fileName"`
 }
 
 // update filename structure
 type UpdateNameReq struct {
-	FileID      uint   `json:"fileId"`     
-	NewFileName string `json:"newFileName"`
+	File     
+	NewFileName string  `json:"newFileName"`
+	Path 		string  `json:"path"`
+	StorageId 	uint	`json:"storageId"`
 }

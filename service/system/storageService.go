@@ -26,9 +26,6 @@ func (s *StorageService) CreateStorage(storageName, storageUrlName, storageRealP
 // update the storage's Name
 func (s *StorageService) UpdateStorageName(id uint, newName string) error {
 	db := global.MysqlDB
-	if err := checkRecordById(id, model.Storage{}); err != nil {
-		return err
-	}
 	res := db.Model(&model.Storage{}).Where("id = ?", id).Update("StorageName", newName)
 	return res.Error
 }
@@ -36,9 +33,6 @@ func (s *StorageService) UpdateStorageName(id uint, newName string) error {
 // update the storage's url name
 func (s *StorageService) UpdateStorageUrlName(id uint, newUrlName string) error {
 	db := global.MysqlDB
-	if err := checkRecordById(id, model.Storage{}); err != nil {
-		return err 
-	}
 	res := db.Model(&model.Storage{}).Where("id = ?", id).Update("StorageUrlName", newUrlName)
 	return res.Error
 }
@@ -46,9 +40,6 @@ func (s *StorageService) UpdateStorageUrlName(id uint, newUrlName string) error 
 // update the storage's path
 func (s *StorageService) UpdateStoragePath(id uint, newPath string) error {
 	db := global.MysqlDB
-	if err := checkRecordById(id, model.Storage{}); err != nil {
-		return err
-	}
 	res := db.Model(&model.Storage{}).Where("id = ?", id).Update("StorageRealPath", newPath)
 	return res.Error
 }
@@ -56,9 +47,6 @@ func (s *StorageService) UpdateStoragePath(id uint, newPath string) error {
 // update the storage's status
 func (s *StorageService) UpdateStorageStatus(id uint, newStatus bool) error {
 	db := global.MysqlDB
-	if err := checkRecordById(id, model.Storage{}); err != nil {
-		return err
-	}
 	res := db.Model(&model.Storage{}).Where("id = ?", id).Update("Status", newStatus)
 	return res.Error
 }
@@ -132,7 +120,7 @@ func (s *StorageService) QueryFiles(storageId, folderId uint) ([]response.Storag
 func (s *StorageService) QueryStorageInfo() (res []response.StorageInfo, err error) {
 	db := global.MysqlDB
 	t := []model.Storage{}
-	tmp := db.Select("ID", "StorageName", "StorageRealPath", "StorageUrlName", "Status").Find(&t)
+	tmp := db.Select("ID", "StorageName", "StorageUrlName", "Status").Find(&t)
 	if tmp.RowsAffected == 0 {
 		err = errors.New("this system don't have storage")
 		return
@@ -142,11 +130,23 @@ func (s *StorageService) QueryStorageInfo() (res []response.StorageInfo, err err
 			Id: v.ID,
 			StorageName: v.StorageName,
 			StorageUrlName: v.StorageUrlName,
-			StorageRealPath: v.StorageRealPath,
 			// the feild express the storate root catalogue
 			Path: "/",
 			Status: v.Status,
 		})
 	}
+	return
+}
+
+// query the storage real path
+func (s *StorageService) QueryStorageRealPath(id uint) (res string, err error) {
+	db := global.MysqlDB
+	t := model.Storage{}
+	tmp := db.Select("StorageRealPath").Find(&t)
+	if tmp.RowsAffected == 0 {
+		err = errors.New("this system don't have storage")
+		return
+	}
+	res = t.StorageRealPath
 	return
 }
