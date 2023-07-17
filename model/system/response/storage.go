@@ -1,6 +1,6 @@
 package response
 
-import "gorm.io/gorm"
+import "time"
 
 const (
 	File = false 
@@ -9,10 +9,11 @@ const (
 
 // file and folder information in the storage
 type StorageFileList struct {
-	gorm.Model
-	FName	string 
-	FSize	uint
-	FType	bool
+	ID		 uint
+	UpdateAt time.Time
+	FName	 string 
+	FSize	 uint
+	FType	 bool
 }
 
 // storage info

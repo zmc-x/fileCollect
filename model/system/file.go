@@ -7,5 +7,5 @@ type File struct {
 	StorageId uint `gorm:"uniqueIndex:fileInfo"`
 	FileSize  uint
 	FileName  string `gorm:"uniqueIndex:fileInfo;not null"`
-	FolderId  uint	`gorm:"uniqueIndex:fileInfo"`
+	FolderId  uint   `gorm:"uniqueIndex:fileInfo"`
 }

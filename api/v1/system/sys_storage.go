@@ -113,6 +113,7 @@ func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
 			StorageName: v.StorageName,
 			StorageURLName: v.StorageUrlName,
 			Status: v.Status,
+			Path: v.Path,
 		})
 	}
 	response.OkWithData(c, data)
@@ -146,7 +147,7 @@ func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 			FName: v.FName,
 			FSize: v.FSize,
 			FType: v.FType,
-			UpdateAt: v.UpdatedAt,
+			UpdateAt: v.UpdateAt,
 		})
 	}
 	response.OkWithData(c, data)

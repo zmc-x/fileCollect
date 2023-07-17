@@ -63,7 +63,7 @@ func (sf *SystemFolderApi) DeleteFolders(c *gin.Context) {
 		return
 	}
 	for _, v := range info.Folders {
-		if err := folderService.DeleteFolder(v.FolderId); err != nil {
+		if err := folderService.DeleteFolder(v.FolderId, info.StorageID); err != nil {
 			log.Println("api/v1/system/sys_folder.go DeleteFolder method:" + err.Error())
 			continue
 		}
@@ -96,7 +96,7 @@ func (sf *SystemFolderApi) UpdateFolder(c *gin.Context) {
 		processError(c, "api/v1/system/sys_folder.go UpdateFolder method:", err)
 		return
 	}
-	if err := folderService.UpdateFolderName(info.FolderId, info.FolderNewName); err != nil {
+	if err := folderService.UpdateFolderName(info.FolderId, info.StorageId, info.FolderNewName); err != nil {
 		// restore
 		defer os.Rename(nName, oName)
 		processError(c, "api/v1/system/sys_folder.go UpdateFolder method:", err)

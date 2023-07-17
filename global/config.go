@@ -3,6 +3,7 @@ package global
 import (
 	"database/sql"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +31,7 @@ type ServerConfig struct {
 var (
 	MysqlDB *gorm.DB
 	SqlDb	*sql.DB
+	Rdb     *redis.Client
 )
 
 

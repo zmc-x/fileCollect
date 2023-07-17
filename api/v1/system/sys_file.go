@@ -73,7 +73,7 @@ func (sf *SystemFileApi) DeleteFiles(c *gin.Context) {
 		return
 	}
 	for _, v := range files.Files {
-		if err := fileService.DeleteFile(v.FileID); err != nil {
+		if err := fileService.DeleteFile(v.FileID, files.StorageId, files.ParentFolderId); err != nil {
 			log.Println("api/v1/system/sys_file.go DeleteFiles method:" + err.Error())
 			continue
 		}
@@ -106,7 +106,7 @@ func (sf *SystemFileApi) UpdateFileName(c *gin.Context) {
 		processError(c, "api/v1/system/sys_file.go UpdateFileName method:", err)
 		return
 	}
-	if err := fileService.UpdateFileName(updateNameReq.FileID, updateNameReq.NewFileName); err != nil {
+	if err := fileService.UpdateFileName(updateNameReq.FileID, updateNameReq.StorageId, updateNameReq.ParentFolderId, updateNameReq.NewFileName); err != nil {
 		// restore 
 		defer os.Rename(filepath.Join(pathPre, updateNameReq.NewFileName), filepath.Join(pathPre, updateNameReq.FileName))
 		processError(c, "api/v1/system/sys_file.go UpdateFileName method:", err)
