@@ -2,11 +2,6 @@ package system
 
 import (
 	"errors"
-	"context"
-	"time"
-	"fmt"
-	"log"
-	"fileCollect/utils/cache"
 	"fileCollect/global"
 	model "fileCollect/model/system"
 
@@ -16,62 +11,80 @@ import (
 type FolderService struct{}
 
 // create the folder in the storage
-func (s *FolderService) CreateFolder(folderName string, storageId uint, parentFolderId *uint) error {
+func (fs *FolderService) CreateFolder(folderName, storageKey, path string) error {
 	db := global.MysqlDB
-	var pfi uint 
-	// root directory translate
-	if parentFolderId == nil {
-		pfi = 0
-	} else {
-		pfi = *parentFolderId
+	var storageId, folderId uint 
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
+	}
+	if folderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	// Check whether there is the same name as the file
+	if tmp := db.Where("storage_id = ? and file_name = ? and folder_id = ?", storageId, folderName, folderId).Find(&model.File{}); tmp.RowsAffected != 0 {
+		return errors.New("this directory contains a file or folder with the same name")
 	}
 	res := db.Create(&model.Folder{
 		FolderName: folderName,
 		StorageId: storageId,
-		ParentFolderId: pfi,
+		ParentFolderId: folderId,
 	})
-	if res.Error == nil {
-		rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-		if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, pfi)); err != nil {
-			log.Println("service/system/folderService.go CreateFolder methods:" + err.Error())
-		}
-	}
 	return res.Error
 }
 
 // update the folder Name
-func (s *FolderService) UpdateFolderName(folderId, storageId uint, newName string) error {
+func (fs *FolderService) UpdateFolderName(folderName, path, storageKey, newName string) error {
 	db := global.MysqlDB
-	// delete cache key-value
-	rcache := cache.SetRedisStore(context.Background(), 5 * time.Minute)
-	if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, folderId)); err != nil {
-		log.Println("service/system/folderService.go UpdateFolderName methods:" + err.Error())
+	var storageId, folderId uint 
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
 	}
-	res := db.Model(&model.Folder{}).Where("id = ?", folderId).Update("FolderName", newName)
+	if folderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	res := db.Model(&model.Folder{}).Where("storage_id = ? and folder_name = ? and parent_folder_id = ?", storageId, folderName, folderId).Update("FolderName", newName)
 	return res.Error
 }
 
 
 // delete the folder information 
-func (s *FolderService) DeleteFolder(folderId, storageId uint) error {
+func (fs *FolderService) DeleteFolder(folderName, path, storageKey string) error {
 	db := global.MysqlDB
-	// delete cache key-value
-	rcache := cache.SetRedisStore(context.Background(), 5 * time.Minute)
-	if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, folderId)); err != nil {
-		log.Println("service/system/folderService.go DeleteFolder methods:" + err.Error())
+	var storageId, parFolderId uint
+	var folder model.Folder 
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
 	}
-	err := db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.Folder{Model : gorm.Model{ID: folderId}}).Association("Files").Clear(); err != nil {
+	if parFolderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	// Look for the number of the folder named folderName
+	if temp := db.Where("storage_id = ? and folder_name = ? and parent_folder_id = ?", storageId, folderName, parFolderId).Find(&folder); temp.RowsAffected == 0 {
+		return errors.New("the corresponding record cannot be queried")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&folder).Association("Files").Clear(); err != nil {
 			return err 
 		}
-		if tmp := tx.Where("folder_id is NULL").Delete(&model.File{}); tmp.Error != nil {
+		if tmp := tx.Where("folder_id is NULL").Unscoped().Delete(&model.File{}); tmp.Error != nil {
 			return errors.New("these records delete error")
 		}
-		if tmp := tx.Where("id = ?", folderId).Delete(&model.Folder{}); tmp.Error != nil {
+		if tmp := tx.Unscoped().Delete(&model.Folder{}, folder.ID); tmp.Error != nil {
 			return tmp.Error
 		}
 		// commit
 		return nil 
 	})
+	return err
+}
+
+// Check whether the directory exists in the system
+func (fs *FolderService) FolderExist(storageKey, path string) (err error) {
+	var storageId uint 
+	storageId, _ = getStorageId(storageKey)
+	_, err = getFolderId(path, storageId)
 	return err
 }

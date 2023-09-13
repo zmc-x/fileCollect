@@ -13,5 +13,11 @@ type UpdateGeneric struct {
 	NewUrlName string  `json:"newUrlName"`
 	NewPath	   string  `json:"newPath"`
 	NewStatus  bool    `json:"newStatus"`
-	StorageID  uint    `json:"storageId"`
+	StorageKey string  `json:"storageKey"`
+}
+
+// request storage file list
+type ReqStorageList struct {
+	Path       string `json:"path"`      
+	StorageKey string `json:"storageKey"`
 }

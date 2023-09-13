@@ -24,6 +24,10 @@ func (s *StorageApi) InitStorageRouter(rg *gin.RouterGroup) {
 	query := storageRouter.Group("query")
 	{
 		query.GET("storageInfo", storageApi.QueryStorageInfo)
-		query.GET("list", storageApi.QueryFilesList)
+		query.POST("list", storageApi.QueryFilesList)
+	}
+	delete := storageRouter.Group("delete")
+	{
+		delete.DELETE("/:storageKey", storageApi.DeleteStorage)
 	}
 }

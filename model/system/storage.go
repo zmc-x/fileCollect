@@ -7,7 +7,7 @@ type Storage struct {
 	Files           []File
 	Folders         []Folder
 	StorageName     string `gorm:"unique;not null"`
-	StorageRealPath string `gorm:"unique;not null"`
+	StorageRealPath string 
 	StorageUrlName  string `gorm:"unique;not null"`
 	Status          bool
 }

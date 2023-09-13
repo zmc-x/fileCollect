@@ -3,13 +3,13 @@ package response
 import "time"
 
 const (
+	// file = 0, folder = 1
 	File = false 
 	Folder = true
 )
 
 // file and folder information in the storage
 type StorageFileList struct {
-	ID		 uint
 	UpdateAt time.Time
 	FName	 string 
 	FSize	 uint
@@ -18,10 +18,7 @@ type StorageFileList struct {
 
 // storage info
 type StorageInfo struct {
-	Id				uint 
 	StorageName 	string 
-	StorageUrlName 	string 
-	// storage's path
-	Path			string 
+	StorageKey	 	string 
 	Status	 		bool
 }

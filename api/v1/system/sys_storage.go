@@ -1,9 +1,13 @@
 package system
 
 import (
+	"context"
+	"encoding/json"
 	"fileCollect/model/common/request"
 	"fileCollect/model/common/response"
-	"strconv"
+	"fileCollect/utils/cache"
+	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +18,7 @@ type SystemStorageApi struct{}
 // method:post
 func (s *SystemStorageApi) CreateStorage(c *gin.Context) {
 	var info request.StorageInfo
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
 	if err := c.ShouldBindJSON(&info); err != nil {
 		processError(c, "api/v1/system/sys_storage.go CreateStorage method:", err)
 		return
@@ -22,6 +27,9 @@ func (s *SystemStorageApi) CreateStorage(c *gin.Context) {
 	if err := storageService.CreateStorage(info.StorageName, info.StorageURLName, info.StorageRealPath); err != nil {
 		processError(c, "api/v1/system/sys_storage.go CreateStorage method:", err)
 		return
+	}
+	if err := rc.Del("storageInfo"); err != nil {
+		log.Println("api/v1/system/sys_storage.go CreateStorage method:" + err.Error())
 	}
 	response.Ok(c)
 }
@@ -52,7 +60,7 @@ func (s *SystemStorageApi) UpdateStorageStatus(c *gin.Context) {
 		processError(c, "api/v1/system/sys_storage.go UpdateStorageStatus method:", err)
 		return 
 	}
-	if err := storageService.UpdateStorageStatus(model.StorageID, model.NewStatus); err != nil {
+	if err := storageService.UpdateStorageStatus(model.StorageKey, model.NewStatus); err != nil {
 		processError(c, "api/v1/system/sys_storage.go UpdateStorageStatus method:", err)
 		return
 	}
@@ -60,8 +68,9 @@ func (s *SystemStorageApi) UpdateStorageStatus(c *gin.Context) {
 }
 
 // update generic function model
-func storageUpdateModel(c *gin.Context, param string, updatefunc func(id uint, new string) error) {
+func storageUpdateModel(c *gin.Context, param string, updatefunc func(storageKey, newN string) error) {
 	var model request.UpdateGeneric
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
 	if err := c.ShouldBindJSON(&model); err != nil {
 		processError(c, "api/v1/system/sys_storage.go storageUpdateModel function:", err)
 		return 
@@ -75,25 +84,27 @@ func storageUpdateModel(c *gin.Context, param string, updatefunc func(id uint, n
 	case "newPath":
 		new = model.NewPath
 	}
-	if err := updatefunc(model.StorageID, new); err != nil {
+	if err := updatefunc(model.StorageKey, new); err != nil {
 		processError(c, "api/v1/system/sys_storage.go storageUpdateModel function:", err)
 		return
+	}
+	if err := rc.Del("storageInfo"); err != nil {
+		log.Println("api/v1/system/sys_storage.go storageUpdateModel function:" + err.Error())
 	}
 	response.Ok(c)
 }
 
-// router:/api/storage/delete/{storageId}
+// router:/api/storage/delete/{storageKey}
 // method:delete
 func (s *SystemStorageApi) DeleteStorage(c *gin.Context) {
-	tStorageId := c.Param("storageId")
-	storageId, err := strconv.Atoi(tStorageId)
-	if err != nil {
+	storageKey := c.Param("storageKey")
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	if err := storageService.DeleteStorage(storageKey); err != nil {
 		processError(c, "api/v1/system/sys_storage.go DeleteStorage method:", err)
 		return
 	}
-	if err := storageService.DeleteStorage(uint(storageId)); err != nil {
-		processError(c, "api/v1/system/sys_storage.go DeleteStorage method:", err)
-		return
+	if err := rc.Del("storageInfo"); err != nil {
+		log.Println("api/v1/system/sys_storage.go DeleteStorage method:" + err.Error())
 	}
 	response.Ok(c)
 }
@@ -101,54 +112,71 @@ func (s *SystemStorageApi) DeleteStorage(c *gin.Context) {
 // router:/api/storage/query/storageInfo
 // method:get
 func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
+	data := response.StorageInfo{}
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	// storageList
+	if str, err := rc.Get("storageInfo"); err == nil {
+		json.Unmarshal([]byte(str), &data.StorageList)
+		response.OkWithData(c, data)
+		return
+	}
 	t, err := storageService.QueryStorageInfo()
 	if err != nil {
 		processError(c, "api/v1/system/sys_storage.go QueryStorageInfo method:", err)
 		return
 	}
-	data := response.StorageInfo{}
 	for _, v := range t {
 		data.StorageList = append(data.StorageList, response.StorageList{
-			StorageID: v.Id,
 			StorageName: v.StorageName,
-			StorageURLName: v.StorageUrlName,
 			Status: v.Status,
-			Path: v.Path,
+			StorageKey: v.StorageKey,
+			Path: "/",
 		})
+	}
+	// data.StorageList []struct -> json
+	if tmp, err := json.Marshal(data.StorageList); err != nil {
+		log.Println("api/v1/system/sys_storage.go QueryStorageInfo method:" + err.Error())
+	} else {
+		rc.Set("storageInfo", string(tmp))
 	}
 	response.OkWithData(c, data)
 }
 
 
 // router:/api/storage/query/list
-// method:get
+// method:post
 func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
-	// get query params
-	tStorageId, tFolderId := c.Query("storageId"), c.Query("folderId")
-	storageId, err := strconv.Atoi(tStorageId)
-	if err != nil {
+	var req request.ReqStorageList
+	var res response.FilesInfo
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	if err := c.ShouldBindJSON(&req); err != nil {
 		processError(c, "api/v1/system/sys_storage.go QueryFilesList method:", err)
+		return 
+	}
+	// FileList:{storageKey}:{path}
+	if str, err := rc.Get("FileList:" + req.StorageKey + ":" + req.Path); err == nil {
+		json.Unmarshal([]byte(str), &res.FileList)
+		response.OkWithData(c, res)
 		return
 	}
-	folderId, err := strconv.Atoi(tFolderId)
-	if err != nil {
+	// call the storageService
+	if t, err := storageService.QueryFiles(req.StorageKey, req.Path); err != nil {
 		processError(c, "api/v1/system/sys_storage.go QueryFilesList method:", err)
-		return
+		return 
+	} else {
+		for _, v := range t {
+			res.FileList = append(res.FileList, response.FileList{
+				FName: v.FName,
+				FSize: v.FSize,
+				FType: v.FType,
+				UpdateAt: v.UpdateAt.Format("2006-01-02 15:04:05"),
+			})
+		}
 	}
-	t, err := storageService.QueryFiles(uint(storageId), uint(folderId))
-	if err != nil {
-		processError(c, "api/v1/system/sys_storage.go QueryFilesList method:", err)
-		return
+	if temp, err := json.Marshal(res.FileList); err != nil {
+		log.Println("api/v1/system/sys_storage.go QueryFilesList method:" + err.Error())
+	} else {
+		rc.Set("FileList:" + req.StorageKey + ":" + req.Path, string(temp))
 	}
-	data := response.FilesInfo{}
-	for _, v := range t {
-		data.FileList = append(data.FileList, response.FileList{
-			FileID: v.ID,
-			FName: v.FName,
-			FSize: v.FSize,
-			FType: v.FType,
-			UpdateAt: v.UpdateAt,
-		})
-	}
-	response.OkWithData(c, data)
+	response.OkWithData(c, res)
 }

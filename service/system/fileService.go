@@ -1,63 +1,63 @@
 package system
 
 import (
-	"context"
+	"errors"
 	"fileCollect/global"
 	model "fileCollect/model/system"
-	"fileCollect/utils/cache"
-	"fmt"
-	"log"
-	"time"
 )
 
 type FileService struct{}
 
 // store files' information into database
-func (s *FileService) StoreFile(fileSize, storageId uint, fileName string, folderId *uint) error {
+func (s *FileService) StoreFile(fileSize uint, fileName, storageKey, path string) error {
 	db := global.MysqlDB
-	var tmp uint
-	// root directory translate
-	if folderId == nil {
-		tmp = 0
-	} else {
-		tmp = *folderId
+	var storageId, folderId uint
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
+	}
+	if folderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	// Check whether the directory stores the same name
+	if temp := db.Where("storage_id = ? and parent_folder_id = ? and folder_name = ?", storageId, folderId, fileName).Find(&model.Folder{}); temp.RowsAffected != 0 {
+		return errors.New("this directory contains a file or folder with the same name")
 	}
 	res := db.Create(&model.File{
 		FileSize:  fileSize,
-		FolderId:  tmp,
+		FolderId:  folderId,
 		StorageId: storageId,
 		FileName:  fileName,
 	})
-	if res.Error == nil {
-		// delete cache key-value
-		rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-		if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, tmp)); err != nil {
-			log.Println("service/system/fileService.go StorageFile methods:" + err.Error())
-		}
-	}
 	return res.Error
 }
 
 // update file related information
-func (s *FileService) UpdateFileName(fileId, storageId, parentFolderId uint, newName string) error {
+func (s *FileService) UpdateFileName(storageKey, path, newName, fileName string) error {
 	db := global.MysqlDB
-	// delete cache key-value
-	rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-	if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, parentFolderId)); err != nil {
-		log.Println("service/system/fileService.go UpdateFileName methods:" + err.Error())
+	var storageId, folderId uint 
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
 	}
-	res := db.Model(&model.File{}).Where("id = ?", fileId).Update("FileName", newName)
+	if folderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	res := db.Model(&model.File{}).Where("storage_id = ? and file_name = ? and folder_id = ?", storageId, fileName, folderId).Update("FileName", newName)
 	return res.Error
 }
 
 // delete file record
-func (s *FileService) DeleteFile(fileId, storageId, parentFolderId uint) error {
+func (s *FileService) DeleteFile(storageKey, fileName, path string) error {
 	db := global.MysqlDB
-	// delete cache key-value
-	rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-	if err := rcache.Del(fmt.Sprintf("files:storageId:%d:folderId:%d", storageId, parentFolderId)); err != nil {
-		log.Println("service/system/fileService.go DeleteFile methods:" + err.Error())
+	var storageId, folderId uint 
+	var err error
+	if storageId, err = getStorageId(storageKey); err != nil {
+		return err
 	}
-	res := db.Where("id = ?", fileId).Delete(&model.File{})
+	if folderId, err = getFolderId(path, storageId); err != nil {
+		return err
+	}
+	res := db.Where("storage_id = ? and file_name = ? and folder_id = ?", storageId, fileName, folderId).Unscoped().Delete(&model.File{})
 	return res.Error
 }

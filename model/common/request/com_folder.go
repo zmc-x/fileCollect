@@ -1,32 +1,29 @@
 package request
 
-type GenericFolder struct {
-	FolderId   uint   `json:"folderId"`
+type GenericInfo struct {
+	Path       string `json:"path"`
+	StorageKey string `json:"storageKey"`
+}
+
+type Folder struct {
 	FolderName string `json:"folderName"`
 }
 
-type GenericStorage struct {
-	StorageId uint   `json:"storageId"`
-	Path      string `json:"path"`
-}
-
-// create folder request info
+// create folder info
 type CreateFolderInfo struct {
-	GenericStorage
-	FolderName     string `json:"folderName"`
-	ParentFolderID uint   `json:"parentFolderId"`
+	GenericInfo
+	FolderName string `json:"folderName"`
 }
 
-// delete folder request info
+// delete folders info
 type DeleteFolderInfo struct {
-	Folders   []GenericFolder `json:"folders"`
-	Path      string          `json:"path"`
-	StorageID uint            `json:"storageId"`
+	GenericInfo
+	Folders    []Folder `json:"folders"`   
 }
 
-// update folder request info
+// update folder info
 type UpdateFolderInfo struct {
-	GenericFolder
-	GenericStorage
+	GenericInfo
+	Folder
 	FolderNewName string `json:"folderNewName"`
 }

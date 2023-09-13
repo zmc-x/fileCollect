@@ -1,7 +1,5 @@
 package response
 
-import "time"
-
 // data
 type StorageInfo struct {
 	StorageList []StorageList `json:"storageList"`
@@ -11,9 +9,8 @@ type StorageInfo struct {
 type StorageList struct {
 	Path           string `json:"path"`          
 	Status         bool   `json:"status"`        
-	StorageID      uint   `json:"storageId"`     
-	StorageName    string `json:"storageName"`   
-	StorageURLName string `json:"storageUrlName"`
+	StorageKey     string `json:"storageKey"`     
+	StorageName    string `json:"storageName"`
 }
 
 // fileInfo
@@ -22,9 +19,8 @@ type FilesInfo struct {
 }
 
 type FileList struct {
-	FileID   uint   	`json:"fileId"`  
 	FName    string 	`json:"fName"`   
 	FSize    uint	  	`json:"fSize"`   
 	FType    bool   	`json:"fType"`   
-	UpdateAt time.Time 	`json:"updateAt"`
+	UpdateAt string  	`json:"updateAt"`
 }
