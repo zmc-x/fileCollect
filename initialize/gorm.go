@@ -3,8 +3,8 @@ package initialize
 import (
 	"fileCollect/global"
 	model "fileCollect/model/system"
+	"fileCollect/utils/zaplog"
 	"fmt"
-	"log"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -25,23 +25,25 @@ func InitMysql(sc *global.ServerConfig) {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
-		log.Fatal("initialize/gorm.go InitMysql function:" + err.Error())
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
 	global.MysqlDB = db
 	global.SqlDb, err = db.DB()
 	if err != nil {
-		log.Fatal("initialize/gorm.go InitMysql function:" + err.Error())
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
 	// set the connection pool
 	global.SqlDb.SetMaxIdleConns(sc.DbPoolMaxIdleConns)
 	global.SqlDb.SetMaxOpenConns(sc.DbPoolMaxOpenConns)
 	global.SqlDb.SetConnMaxLifetime(time.Hour * time.Duration(sc.DbPoolConnMaxLifetime))
+	zaplog.GetLogLevel(zaplog.INFO, "database connection successful")
 }
 
 // create table
 func InitTable() {
 	err := global.MysqlDB.AutoMigrate(&model.Storage{}, &model.Folder{}, &model.File{})
 	if err != nil {
-		log.Fatal(err)
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "database table initialization completed")
 }

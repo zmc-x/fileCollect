@@ -3,8 +3,8 @@ package initialize
 import (
 	"context"
 	"fileCollect/global"
+	"fileCollect/utils/zaplog"
 	"fmt"
-	"log"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,9 +18,9 @@ func InitReids(sc *global.ServerConfig) {
 	// test connection
 	Pong, err := cli.Ping(context.Background()).Result()
 	if err != nil {
-		log.Fatal("initialize/redis.go InitRedis:" + err.Error())
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	} else {
-		log.Println("initialize/redis.go InitReids: redis connect ping response :" + Pong)
+		zaplog.GetLogLevel(zaplog.INFO, "redis connect ping response :" + Pong)
 		global.Rdb = cli
 	}
 }

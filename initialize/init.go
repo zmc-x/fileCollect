@@ -2,7 +2,7 @@ package initialize
 
 import (
 	"fileCollect/global"
-	"log"
+	"fileCollect/utils/zaplog"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -35,12 +35,13 @@ func InitConfig() *global.ServerConfig {
 	// read the config.yml
 	data, err := os.ReadFile("config.yml")
 	if err != nil {
-		log.Fatal("initialize/init.go InitConfig function:" + err.Error())
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		log.Fatal("initialize/init.go InitConfig function:" + err.Error())
+		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "configuration file imported successfully")
 	return &global.ServerConfig{
 		DbUser:                config.Mysql.Username,
 		DbPasswd:              config.Mysql.Password,

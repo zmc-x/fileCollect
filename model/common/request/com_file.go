@@ -25,3 +25,11 @@ type UpdateNameReq struct {
 	Path           string `json:"path"`
 	StorageKey     string `json:"storageKey"`
 }
+
+// download file model
+type DownMode struct {
+	Files      []string `json:"files"`     
+	Folders    []string `json:"folders"`   
+	Path       string   `json:"path"`      
+	StorageKey string   `json:"storageKey"`
+}

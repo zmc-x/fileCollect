@@ -6,7 +6,7 @@ import (
 	"fileCollect/model/common/request"
 	"fileCollect/model/common/response"
 	"fileCollect/utils/cache"
-	"log"
+	"fileCollect/utils/zaplog"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,18 +19,21 @@ type SystemStorageApi struct{}
 func (s *SystemStorageApi) CreateStorage(c *gin.Context) {
 	var info request.StorageInfo
 	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	if err := rc.Del("storageInfo"); err != nil {
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
+	}
 	if err := c.ShouldBindJSON(&info); err != nil {
-		processError(c, "api/v1/system/sys_storage.go CreateStorage method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return
 	}
 	// store
 	if err := storageService.CreateStorage(info.StorageName, info.StorageURLName, info.StorageRealPath); err != nil {
-		processError(c, "api/v1/system/sys_storage.go CreateStorage method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return
 	}
-	if err := rc.Del("storageInfo"); err != nil {
-		log.Println("api/v1/system/sys_storage.go CreateStorage method:" + err.Error())
-	}
+	
 	response.Ok(c)
 }
 
@@ -56,12 +59,18 @@ func (s *SystemStorageApi) UpdateStoragePath(c *gin.Context) {
 // method:post
 func (s *SystemStorageApi) UpdateStorageStatus(c *gin.Context) {
 	var model request.UpdateGeneric
+	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	if err := rc.Del("storageInfo"); err != nil {
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
+	}
 	if err := c.ShouldBindJSON(&model); err != nil {
-		processError(c, "api/v1/system/sys_storage.go UpdateStorageStatus method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return 
 	}
 	if err := storageService.UpdateStorageStatus(model.StorageKey, model.NewStatus); err != nil {
-		processError(c, "api/v1/system/sys_storage.go UpdateStorageStatus method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return
 	}
 	response.Ok(c)
@@ -71,8 +80,12 @@ func (s *SystemStorageApi) UpdateStorageStatus(c *gin.Context) {
 func storageUpdateModel(c *gin.Context, param string, updatefunc func(storageKey, newN string) error) {
 	var model request.UpdateGeneric
 	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	if err := rc.Del("storageInfo"); err != nil {
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
+	}
 	if err := c.ShouldBindJSON(&model); err != nil {
-		processError(c, "api/v1/system/sys_storage.go storageUpdateModel function:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return 
 	}
 	var new string 
@@ -85,11 +98,9 @@ func storageUpdateModel(c *gin.Context, param string, updatefunc func(storageKey
 		new = model.NewPath
 	}
 	if err := updatefunc(model.StorageKey, new); err != nil {
-		processError(c, "api/v1/system/sys_storage.go storageUpdateModel function:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return
-	}
-	if err := rc.Del("storageInfo"); err != nil {
-		log.Println("api/v1/system/sys_storage.go storageUpdateModel function:" + err.Error())
 	}
 	response.Ok(c)
 }
@@ -99,12 +110,13 @@ func storageUpdateModel(c *gin.Context, param string, updatefunc func(storageKey
 func (s *SystemStorageApi) DeleteStorage(c *gin.Context) {
 	storageKey := c.Param("storageKey")
 	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
-	if err := storageService.DeleteStorage(storageKey); err != nil {
-		processError(c, "api/v1/system/sys_storage.go DeleteStorage method:", err)
-		return
-	}
 	if err := rc.Del("storageInfo"); err != nil {
-		log.Println("api/v1/system/sys_storage.go DeleteStorage method:" + err.Error())
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
+	}
+	if err := storageService.DeleteStorage(storageKey); err != nil {
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
+		return
 	}
 	response.Ok(c)
 }
@@ -122,7 +134,8 @@ func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
 	}
 	t, err := storageService.QueryStorageInfo()
 	if err != nil {
-		processError(c, "api/v1/system/sys_storage.go QueryStorageInfo method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return
 	}
 	for _, v := range t {
@@ -135,7 +148,7 @@ func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
 	}
 	// data.StorageList []struct -> json
 	if tmp, err := json.Marshal(data.StorageList); err != nil {
-		log.Println("api/v1/system/sys_storage.go QueryStorageInfo method:" + err.Error())
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
 	} else {
 		rc.Set("storageInfo", string(tmp))
 	}
@@ -150,7 +163,8 @@ func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 	var res response.FilesInfo
 	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
 	if err := c.ShouldBindJSON(&req); err != nil {
-		processError(c, "api/v1/system/sys_storage.go QueryFilesList method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return 
 	}
 	// FileList:{storageKey}:{path}
@@ -161,7 +175,8 @@ func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 	}
 	// call the storageService
 	if t, err := storageService.QueryFiles(req.StorageKey, req.Path); err != nil {
-		processError(c, "api/v1/system/sys_storage.go QueryFilesList method:", err)
+		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+		response.Fail(c)
 		return 
 	} else {
 		for _, v := range t {
@@ -174,7 +189,7 @@ func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 		}
 	}
 	if temp, err := json.Marshal(res.FileList); err != nil {
-		log.Println("api/v1/system/sys_storage.go QueryFilesList method:" + err.Error())
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
 	} else {
 		rc.Set("FileList:" + req.StorageKey + ":" + req.Path, string(temp))
 	}

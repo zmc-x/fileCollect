@@ -1,14 +1,10 @@
 package system
 
 import (
-	"context"
 	"errors"
 	"fileCollect/global"
 	model "fileCollect/model/system"
 	"fileCollect/model/system/response"
-	"fileCollect/utils/cache"
-	"log"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -24,23 +20,12 @@ func (s *StorageService) CreateStorage(storageName, storageUrlName, storageRealP
 		StorageRealPath: storageRealPath,
 		Status:          true,
 	})
-	// delete cache key-value
-	if res.Error == nil {
-		rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-		if err := rcache.Del("storageList"); err != nil {
-			log.Println("service/system storageService.go CreateStorage method:" + err.Error())
-		}
-	}
 	return res.Error
 }
 
 // update the storage's Name
 func (s *StorageService) UpdateStorageName(storageKey, newName string) error {
 	db := global.MysqlDB
-	rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-	if err := rcache.Del("storageList"); err != nil {
-		log.Println("service/system storageService.go UpdateStorageName method:" + err.Error())
-	}
 	res := db.Model(&model.Storage{}).Where("storage_url_name = ?", storageKey).Update("StorageName", newName)
 	return res.Error
 }
@@ -48,10 +33,6 @@ func (s *StorageService) UpdateStorageName(storageKey, newName string) error {
 // update the storage's url name
 func (s *StorageService) UpdateStorageUrlName(storageKey, newUrlName string) error {
 	db := global.MysqlDB
-	rcache := cache.SetRedisStore(context.Background(), 5*time.Minute)
-	if err := rcache.Del("storageList"); err != nil {
-		log.Println("service/system storageService.go UpdateStoragePath method:" + err.Error())
-	}
 	res := db.Model(&model.Storage{}).Where("storage_url_name = ?", storageKey).Update("StorageUrlName", newUrlName)
 	return res.Error
 }
@@ -59,6 +40,8 @@ func (s *StorageService) UpdateStorageUrlName(storageKey, newUrlName string) err
 // update the storage's path
 func (s *StorageService) UpdateStoragePath(storageKey, newPath string) error {
 	db := global.MysqlDB
+	// delete the global realPath
+	delete(global.RealPath, storageKey)
 	res := db.Model(&model.Storage{}).Where("storage_url_name = ?", storageKey).Update("StorageRealPath", newPath)
 	return res.Error
 }
@@ -170,11 +153,19 @@ func (s *StorageService) QueryStorageInfo() (res []response.StorageInfo, err err
 func (s *StorageService) QueryStorageRealPath(storageKey string) (res string, err error) {
 	db := global.MysqlDB
 	t := model.Storage{}
+	if global.RealPath == nil {
+		global.RealPath = make(map[string]string)
+	}
+	if _, ok := global.RealPath[storageKey]; ok {
+		res, err = global.RealPath[storageKey], nil 
+		return
+	}
 	tmp := db.Select("StorageRealPath").Where("storage_url_name = ?", storageKey).Find(&t)
 	if tmp.RowsAffected == 0 {
 		err = errors.New("this system don't have storage")
 		return
 	}
 	res, err = t.StorageRealPath, nil
+	global.RealPath[storageKey] = res
 	return
 }

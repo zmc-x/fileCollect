@@ -15,5 +15,6 @@ func (f *FileApi) InitFileApiRouter(rg *gin.RouterGroup) {
 		fileRouter.POST("uploadFiles", fileApis.UploadFiles)
 		fileRouter.DELETE("deleteFile", fileApis.DeleteFiles)
 		fileRouter.POST("updateFile", fileApis.UpdateFileName)
+		fileRouter.POST("download", fileApis.Download)
 	}
 }

@@ -7,6 +7,9 @@ import (
 )
 
 func main() {
+	// initialize zap
+	initialize.InitLogger()
+	defer global.Logger.Sync()
 	serverConfig := initialize.InitConfig()
 	initialize.InitMysql(serverConfig)
 	initialize.InitReids(serverConfig)
