@@ -5,6 +5,7 @@ type StorageInfo struct {
 	StorageName     string `json:"storageName"`    
 	StorageRealPath string `json:"storageRealPath"`
 	StorageURLName  string `json:"storageUrlName"` 
+	DeadLine		string `json:"deadLine"`
 }
 
 // update model
@@ -13,6 +14,7 @@ type UpdateGeneric struct {
 	NewUrlName string  `json:"newUrlName"`
 	NewPath	   string  `json:"newPath"`
 	NewStatus  bool    `json:"newStatus"`
+	DeadLine   string  `json:"deadLine,omitempty"`
 	StorageKey string  `json:"storageKey"`
 }
 

@@ -7,6 +7,8 @@ import (
 )
 
 func Router() *gin.Engine {
+	// set release environment
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	// set the upload file the max size
 	r.MaxMultipartMemory = 1 << 30	// 1G

@@ -3,6 +3,7 @@ package main
 import (
 	"fileCollect/global"
 	"fileCollect/initialize"
+	"fileCollect/service/system"
 	"fmt"
 )
 
@@ -16,6 +17,7 @@ func main() {
 	// defer close the database connect
 	defer global.SqlDb.Close()
 	initialize.InitTable()
+	system.InitTimer()
 	r := initialize.Router()
 	r.Run(fmt.Sprintf(":%d", serverConfig.GinPort))
 }

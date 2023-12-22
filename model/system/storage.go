@@ -1,6 +1,10 @@
 package system
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Storage struct {
 	gorm.Model
@@ -10,4 +14,5 @@ type Storage struct {
 	StorageRealPath string 
 	StorageUrlName  string `gorm:"unique;not null"`
 	Status          bool
+	DeadLine		time.Time
 }

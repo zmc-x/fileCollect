@@ -21,11 +21,10 @@ import (
 
 type SystemFileApi struct{}
 
-
 // router: /api/file/uploadFiles
 // method: post
 func (sf *SystemFileApi) UploadFiles(c *gin.Context) {
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	form, err := c.MultipartForm()
 	if err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
@@ -71,15 +70,15 @@ func (sf *SystemFileApi) UploadFiles(c *gin.Context) {
 			zaplog.GetLogLevel(zaplog.WARN, err.Error())
 		}
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "upload files successfully")
 	response.OkWithMsg(c, "Upload successfully")
 }
-
 
 // router:/api/file/deleteFile/
 // method: delete
 func (sf *SystemFileApi) DeleteFiles(c *gin.Context) {
 	var files request.FileArray
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&files); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
@@ -105,6 +104,7 @@ func (sf *SystemFileApi) DeleteFiles(c *gin.Context) {
 			zaplog.GetLogLevel(zaplog.WARN, err.Error())
 		}
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "delete files successfully")
 	response.Ok(c)
 }
 
@@ -112,7 +112,7 @@ func (sf *SystemFileApi) DeleteFiles(c *gin.Context) {
 // method: post
 func (sf *SystemFileApi) UpdateFileName(c *gin.Context) {
 	var updateNameReq request.UpdateNameReq
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&updateNameReq); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
@@ -137,15 +137,15 @@ func (sf *SystemFileApi) UpdateFileName(c *gin.Context) {
 		return
 	}
 	if err := fileService.UpdateFileName(updateNameReq.StorageKey, updateNameReq.Path, updateNameReq.NewFileName, updateNameReq.FileName); err != nil {
-		// restore 
+		// restore
 		defer os.Rename(filepath.Join(pathPre, updateNameReq.NewFileName), filepath.Join(pathPre, updateNameReq.FileName))
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
 		return
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "updateFileName successfully")
 	response.Ok(c)
 }
-
 
 // router: /api/file/download
 // method: post
@@ -166,10 +166,9 @@ func (sf *SystemFileApi) Download(c *gin.Context) {
 	}
 	lenFile, lenFolder := len(info.Files), len(info.Folders)
 	if lenFile > 1 || lenFolder > 0 {
-		
 		// translate the zip file
 		path := []string{}
-		var findFile func(src string) 
+		var findFile func(src string)
 		findFile = func(src string) {
 			dir, _ := os.Stat(src)
 			if !dir.IsDir() {
@@ -230,10 +229,11 @@ func (sf *SystemFileApi) Download(c *gin.Context) {
 		// Serve the file for download
 		c.File(src)
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "download files successfully")
 }
 
 // create zip archive
-func createZip(zipWrite *zip.Writer, path []string, prefix string) (err error){
+func createZip(zipWrite *zip.Writer, path []string, prefix string) (err error) {
 	for _, v := range path {
 		zipName, err := filepath.Rel(prefix, v)
 		if err != nil {

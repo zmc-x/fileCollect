@@ -19,7 +19,7 @@ type SystemFolderApi struct{}
 // method:post
 func (sf *SystemFolderApi) CreateFolder(c *gin.Context) {
 	var createFolderInfo request.CreateFolderInfo
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&createFolderInfo); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
@@ -50,15 +50,15 @@ func (sf *SystemFolderApi) CreateFolder(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "create folder successfully")
 	response.Ok(c)
 }
-
 
 // router:/api/folder/deletefolder/
 // method:delete
 func (sf *SystemFolderApi) DeleteFolders(c *gin.Context) {
 	var info request.DeleteFolderInfo
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&info); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
@@ -84,6 +84,7 @@ func (sf *SystemFolderApi) DeleteFolders(c *gin.Context) {
 			zaplog.GetLogLevel(zaplog.WARN, err.Error())
 		}
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "delete folder successfully")
 	response.Ok(c)
 }
 
@@ -91,7 +92,7 @@ func (sf *SystemFolderApi) DeleteFolders(c *gin.Context) {
 // method:post
 func (sf *SystemFolderApi) UpdateFolder(c *gin.Context) {
 	var info request.UpdateFolderInfo
-	rc := cache.SetRedisStore(context.Background(), 5 * time.Minute)
+	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&info); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
@@ -122,5 +123,6 @@ func (sf *SystemFolderApi) UpdateFolder(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
+	zaplog.GetLogLevel(zaplog.INFO, "update folder information successfully")
 	response.Ok(c)
 }
