@@ -6,7 +6,6 @@ import (
 	"fileCollect/model/common/response"
 	"fileCollect/utils/cache"
 	"fileCollect/utils/zaplog"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -36,16 +35,8 @@ func (sf *SystemFolderApi) CreateFolder(c *gin.Context) {
 		return
 	}
 	// create folder in system
-	err = os.Mkdir(filepath.Join(storagePath, createFolderInfo.Path, createFolderInfo.FolderName), 0644)
+	err = folderService.CreateFolder(storagePath, filepath.Join(createFolderInfo.Path, createFolderInfo.FolderName))
 	if err != nil {
-		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
-		response.Fail(c)
-		return
-	}
-	// database
-	err = folderService.CreateFolder(createFolderInfo.FolderName, createFolderInfo.StorageKey, createFolderInfo.Path)
-	if err != nil {
-		defer os.Remove(filepath.Join(storagePath, createFolderInfo.Path, createFolderInfo.FolderName))
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
 		return
@@ -74,15 +65,18 @@ func (sf *SystemFolderApi) DeleteFolders(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
-	for _, v := range info.Folders {
-		if err := folderService.DeleteFolder(v.FolderName, info.Path, info.StorageKey); err != nil {
+	folderLen := len(info.Folders)
+	for _, folder := range info.Folders {
+		if err := folderService.DeleteFolder(storagePath, filepath.Join(info.Path, folder.FolderName)); err != nil {
 			zaplog.GetLogLevel(zaplog.WARN, err.Error())
 			continue
 		}
-		// delete system folder
-		if err := os.RemoveAll(filepath.Join(storagePath, info.Path, v.FolderName)); err != nil {
-			zaplog.GetLogLevel(zaplog.WARN, err.Error())
-		}
+		folderLen--
+	}
+	if folderLen != 0 {
+		zaplog.GetLogLevel(zaplog.WARN, "Some folders failed to be deleted")
+		response.FailWithMsg(c, "Some folders failed to be deleted")
+		return
 	}
 	zaplog.GetLogLevel(zaplog.INFO, "delete folder successfully")
 	response.Ok(c)
@@ -109,17 +103,10 @@ func (sf *SystemFolderApi) UpdateFolder(c *gin.Context) {
 		return
 	}
 	folderPre := filepath.Join(storagePath, info.Path)
-	nName, oName := filepath.Join(folderPre, info.FolderNewName), filepath.Join(folderPre, info.FolderName)
 	// update system folder
-	if err := os.Rename(oName, nName); err != nil {
-		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
-		response.Fail(c)
-		return
-	}
-	if err := folderService.UpdateFolderName(info.FolderName, info.Path, info.StorageKey, info.FolderNewName); err != nil {
-		// restore
-		defer os.Rename(nName, oName)
-		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
+	err = folderService.UpdateFolderName(folderPre, info.FolderName, info.FolderNewName)
+	if err != nil {
+		zaplog.GetLogLevel(zaplog.WARN, err.Error())
 		response.Fail(c)
 		return
 	}

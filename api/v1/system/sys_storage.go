@@ -6,6 +6,7 @@ import (
 	"fileCollect/global"
 	"fileCollect/model/common/request"
 	"fileCollect/model/common/response"
+	sysres "fileCollect/model/system/response"
 	"fileCollect/utils/cache"
 	"fileCollect/utils/zaplog"
 	"time"
@@ -28,9 +29,9 @@ func (s *SystemStorageApi) CreateStorage(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
-	tempValidTime, err := time.Parse(global.Format, info.DeadLine + "(CST)")
+	tempValidTime, err := time.Parse(global.Format, info.DeadLine+"(CST)")
 	if err != nil {
-		tempValidTime, _  = time.Parse(global.Format, "9999-01-01 00:00:00(CST)")
+		tempValidTime, _ = time.Parse(global.Format, "9999-01-01 00:00:00(CST)")
 	}
 	// store
 	if err := storageService.CreateStorage(info.StorageName, info.StorageURLName, info.StorageRealPath, tempValidTime); err != nil {
@@ -73,9 +74,9 @@ func (s *SystemStorageApi) UpdateStorageStatus(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
-	t, err := time.Parse(global.Format, model.DeadLine + "(CST)")
+	t, err := time.Parse(global.Format, model.DeadLine+"(CST)")
 	if err != nil {
-		t, _ = time.Parse(global.Format, "9999-01-01 00:00:00(CST)") 
+		t, _ = time.Parse(global.Format, "9999-01-01 00:00:00(CST)")
 	}
 	if err := storageService.UpdateStorageStatus(model.StorageKey, model.NewStatus, t); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
@@ -136,7 +137,7 @@ func (s *SystemStorageApi) DeleteStorage(c *gin.Context) {
 // router:/api/storage/query/storageInfo
 // method:get
 func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
-	data := response.StorageInfo{}
+	data := sysres.Storages{}
 	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	// storageList
 	if str, err := rc.Get("storageInfo"); err == nil {
@@ -144,19 +145,11 @@ func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
 		response.OkWithData(c, data)
 		return
 	}
-	t, err := storageService.QueryStorageInfo()
+	data, err := storageService.QueryStorageInfo()
 	if err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
 		return
-	}
-	for _, v := range t {
-		data.StorageList = append(data.StorageList, response.StorageList{
-			StorageName: v.StorageName,
-			Status:      v.Status,
-			StorageKey:  v.StorageKey,
-			Path:        "/",
-		})
 	}
 	// data.StorageList []struct -> json
 	if tmp, err := json.Marshal(data.StorageList); err != nil {
@@ -172,7 +165,7 @@ func (s *SystemStorageApi) QueryStorageInfo(c *gin.Context) {
 // method:post
 func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 	var req request.ReqStorageList
-	var res response.FilesInfo
+	var res sysres.Files
 	rc := cache.SetRedisStore(context.Background(), 5*time.Minute)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
@@ -186,19 +179,11 @@ func (s *SystemStorageApi) QueryFilesList(c *gin.Context) {
 		return
 	}
 	// call the storageService
-	if t, err := storageService.QueryFiles(req.StorageKey, req.Path); err != nil {
+	res, err := storageService.QueryFiles(req.StorageKey, req.Path)
+	if err != nil {
 		zaplog.GetLogLevel(zaplog.ERROR, err.Error())
 		response.Fail(c)
 		return
-	} else {
-		for _, v := range t {
-			res.FileList = append(res.FileList, response.FileList{
-				FName:    v.FName,
-				FSize:    v.FSize,
-				FType:    v.FType,
-				UpdateAt: v.UpdateAt.Format("2006-01-02 15:04:05"),
-			})
-		}
 	}
 	if temp, err := json.Marshal(res.FileList); err != nil {
 		zaplog.GetLogLevel(zaplog.WARN, err.Error())

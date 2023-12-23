@@ -1,12 +1,18 @@
 package response
 
+const (
+	// file = 0, folder = 1
+	File = false 
+	Folder = true
+)
+
 // data
-type StorageInfo struct {
-	StorageList []StorageList `json:"storageList"`
+type Storages struct {
+	StorageList []StorageItem `json:"storageList,omitempty"`
 }
 
 // storageList
-type StorageList struct {
+type StorageItem struct {
 	Path           string `json:"path"`          
 	Status         bool   `json:"status"`        
 	StorageKey     string `json:"storageKey"`     
@@ -14,11 +20,11 @@ type StorageList struct {
 }
 
 // fileInfo
-type FilesInfo struct {
-	FileList []FileList `json:"fileList"`
+type Files struct {
+	FileList []FileItem `json:"fileList,omitempty"`
 }
 
-type FileList struct {
+type FileItem struct {
 	FName    string 	`json:"fName"`   
 	FSize    uint	  	`json:"fSize"`   
 	FType    bool   	`json:"fType"`   

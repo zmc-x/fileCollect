@@ -5,9 +5,9 @@ import (
 	"fileCollect/global"
 	model "fileCollect/model/system"
 	"fileCollect/model/system/response"
+	"os"
+	"path/filepath"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type StorageService struct{}
@@ -79,8 +79,7 @@ func (s *StorageService) UpdateStorageStatus(storageKey string, newStatus bool, 
 		token <- struct{}{}
 		close(done)
 		findEle := func(validTime validPair, status bool) {
-			for k, v := range storageSet {
-				if !v {continue}
+			for k := range storageSet {
 				if k.StorageUrlName == validTime.StorageUrlName {
 					storageSet[validTime] = status
 					return
@@ -95,7 +94,7 @@ func (s *StorageService) UpdateStorageStatus(storageKey string, newStatus bool, 
 			}
 			go validTimer(k)
 		}
-		<- token
+		<-token
 	}
 	return res.Error
 }
@@ -111,74 +110,36 @@ func (s *StorageService) DeleteStorage(storageKey string) error {
 	} else {
 		storage.ID = t
 	}
-	// clear the relation
-	// start transaction
-	err := db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&storage).Association("Files").Clear(); err != nil {
-			return err
-		}
-		if err := tx.Model(&storage).Association("Folders").Clear(); err != nil {
-			return err
-		}
-		// delete all files and all folders in the storage
-		if tmp := tx.Where("storage_id is NULL").Unscoped().Delete(&model.File{}); tmp.Error != nil {
-			return errors.New("these records delete error")
-		}
-		if tmp := tx.Where("storage_id is NULL").Unscoped().Delete(&model.Folder{}); tmp.Error != nil {
-			return errors.New("these records delete error")
-		}
-		// delete the storage
-		if tmp := tx.Where("storage_url_name = ?", storageKey).Unscoped().Delete(&model.Storage{}); tmp.Error != nil {
-			return errors.New("these records delete error")
-		}
-		return nil
-	})
-	return err
+	res := db.Where("storage_url_name = ?", storageKey).Delete(&storage)
+	return res.Error
 }
 
 // query the storage file by storageKey and path
-func (s *StorageService) QueryFiles(storageKey, path string) ([]response.StorageFileList, error) {
-	// query the file
-	var res []response.StorageFileList
-	var storageId, folderId uint
-	var err error
-	files, folders := []model.File{}, []model.Folder{}
-	db := global.MysqlDB
-	if storageId, err = getStorageId(storageKey); err != nil {
+func (s *StorageService) QueryFiles(storageKey, path string) (response.Files, error) {
+	res := response.Files{}
+	storageRealPath, err := s.QueryStorageRealPath(storageKey)
+	if err != nil {
 		return res, err
 	}
-	if folderId, err = getFolderId(path, storageId); err != nil {
+	prefix := filepath.Join(storageRealPath, path)
+	files, err := os.ReadDir(prefix)
+	if err != nil {
 		return res, err
 	}
-	// get all files from storage
-	if tmp := db.Where("storage_id = ? and folder_id = ?", storageId, folderId).Find(&files); tmp.Error != nil {
-		return res, tmp.Error
-	}
-	if tmp := db.Where("storage_id = ? and parent_folder_id = ?", storageId, folderId).Find(&folders); tmp.Error != nil {
-		return res, tmp.Error
-	}
-	// return the result
-	for _, v := range files {
-		res = append(res, response.StorageFileList{
-			UpdateAt: v.UpdatedAt,
-			FName:    v.FileName,
-			FSize:    v.FileSize,
-			FType:    response.File,
-		})
-	}
-	for _, v := range folders {
-		res = append(res, response.StorageFileList{
-			UpdateAt: v.UpdatedAt,
-			FName:    v.FolderName,
-			FSize:    0,
-			FType:    response.Folder,
+	for _, file := range files {
+		fileinfo, _ := os.Stat(filepath.Join(prefix, file.Name()))
+		res.FileList = append(res.FileList, response.FileItem{
+			FName:    fileinfo.Name(),
+			FSize:    uint(fileinfo.Size()),
+			UpdateAt: fileinfo.ModTime().Format("2006-01-02 15:04:05"),
+			FType:    fileinfo.IsDir(),
 		})
 	}
 	return res, nil
 }
 
 // query the storage information
-func (s *StorageService) QueryStorageInfo() (res []response.StorageInfo, err error) {
+func (s *StorageService) QueryStorageInfo() (res response.Storages, err error) {
 	db := global.MysqlDB
 	t := []model.Storage{}
 	tmp := db.Select("ID", "StorageName", "StorageUrlName", "Status").Find(&t)
@@ -187,10 +148,11 @@ func (s *StorageService) QueryStorageInfo() (res []response.StorageInfo, err err
 		return
 	}
 	for _, v := range t {
-		res = append(res, response.StorageInfo{
+		res.StorageList = append(res.StorageList, response.StorageItem{
 			StorageName: v.StorageName,
 			StorageKey:  v.StorageUrlName,
 			Status:      v.Status,
+			Path:        "/",
 		})
 	}
 	return

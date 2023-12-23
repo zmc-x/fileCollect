@@ -41,7 +41,7 @@ func InitMysql(sc *global.ServerConfig) {
 
 // create table
 func InitTable() {
-	err := global.MysqlDB.AutoMigrate(&model.Storage{}, &model.Folder{}, &model.File{})
+	err := global.MysqlDB.AutoMigrate(&model.Storage{})
 	if err != nil {
 		zaplog.GetLogLevel(zaplog.FATAL, err.Error())
 	}
